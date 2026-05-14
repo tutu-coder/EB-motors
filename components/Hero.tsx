@@ -1,74 +1,96 @@
 "use client";
 
-import { useRef } from "react";
+import Navbar from "@/components/Navbar";
+import Image from "next/image";
+import CanvasSequence from "@/components/CanvasSequence"; 
+
+
 import {
   motion,
   useScroll,
   useTransform,
   useSpring,
-  useMotionValueEvent,
+  useMotionTemplate,
 } from "framer-motion";
+import { useRef } from "react";
 
-export default function Hero() {
-  const containerRef = useRef(null);
-  const imageRef = useRef<HTMLImageElement>(null);
+export default function Home() {
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const { scrollYProgress } = useScroll({
     target: containerRef,
-    offset: ["start start", "end start"],
+    offset: ["start start", "end end"],
   });
 
-  // 🎞️ Frames (FIX: stable reference, not recreated every render)
-  const framesRef = useRef<string[]>([]);
-
-  if (framesRef.current.length === 0) {
-    framesRef.current = Array.from({ length: 240 }, (_, i) =>
-      `/car-frames/ezgif-frame-${String(i + 1).padStart(3, "0")}.jpg`
-    );
-  }
-
-  const frames = framesRef.current;
-
-  // 🎬 FRAME CONTROL (UNCHANGED)
+  // Frame progression
   const frameIndex = useTransform(
     scrollYProgress,
     [0.1, 0.8, 0.9, 1],
     [0, 239, 239, 239]
   );
 
-  // 🔥 KEEP ORIGINAL FEEL (DO NOT OVER-OPTIMIZE THIS)
+  // Smooth sequence animation
   const smoothIndex = useSpring(frameIndex, {
     stiffness: 400,
     damping: 90,
   });
 
-  // 🧠 FIX: prevent duplicate frame swaps (performance boost without changing visuals)
-  const lastFrame = useRef(-1);
+  // Slight hero scale movement
+  const heroScale = useTransform(
+    smoothIndex,
+    [0, 100],
+    [1, 0.98]
+  );
 
-  useMotionValueEvent(smoothIndex, "change", (latest) => {
-    const i = Math.round(latest);
+  // =========================
+  // LOGO + BUTTONS FADE OUT
+  // =========================
 
-    if (
-      i === lastFrame.current ||
-      !imageRef.current ||
-      !frames[i]
-    ) return;
 
-    imageRef.current.src = frames[i];
-    lastFrame.current = i;
-  });
+
+
+
+  const logoOpacity = useTransform(
+    smoothIndex,
+    [0, 80, 120],
+    [1, 1, 0]
+  );
+
+  const logoY = useTransform(
+    smoothIndex,
+    [0, 120],
+    [0, -40]
+  );
+
+  const logoBlur = useTransform(
+    smoothIndex,
+    [80, 120],
+    [0, 10]
+  );
+
+  const blurFilter = useMotionTemplate`blur(${logoBlur}px)`;
+
+  // =========================
+  // "SINCE 1930" REVEAL
+  // =========================
+
+  const sinceOpacity = useTransform(
+    smoothIndex,
+    [200, 220, 239],
+    [0, 0, 1]
+  );
+
+  const sinceY = useTransform(
+    smoothIndex,
+    [200, 239],
+    [40, 0]
+  );
 
   // 💥 HERO FADE OUT (UNCHANGED)
   const heroOpacity = useTransform(
     smoothIndex,
     [0, 80],
     [1, 0]
-  );
-
-  const heroScale = useTransform(
-    smoothIndex,
-    [0, 100],
-    [1, 0.98]
   );
 
   // 🚗 READY TO DRIVE (UNCHANGED — FIXED ONLY REACT STABILITY)
@@ -85,29 +107,28 @@ export default function Hero() {
   );
 
   return (
-    <section ref={containerRef} className="relative h-[600vh] bg-black">
+    <main className="relative w-full bg-background selection:bg-white/20 selection:text-white">
+      <Navbar />
 
-      {/* Sticky Stage */}
-      <div className="sticky top-0 h-screen overflow-hidden">
+      {/* Scroll Container */}
+      <div
+        ref={containerRef}
+        className="relative h-[600vh] w-full"
+      >
+        {/* Sticky Canvas */}
+        <div className="sticky top-0 left-0 h-screen w-full overflow-hidden">
 
-        {/* 🎬 FRAME ANIMATION */}
-        <div className="absolute inset-0">
-          <img
-            ref={imageRef}
-            src={frames[0]}
-            className="w-full h-full object-cover"
-            alt="Cinematic car animation"
-          />
-        </div>
+          <CanvasSequence progress={scrollYProgress} />
 
-        {/* OVERLAYS (UNCHANGED — includes blur support stacking) */}
-        <div className="absolute inset-0 bg-black/30" />
+          {/* HERO CONTENT */}
+          <motion.div
+            style={{
+              scale: heroScale,
+            }}
+            className="relative z-10 flex h-full items-center justify-center"
+          >
 
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.12),transparent_45%)]" />
-
-        <div className="absolute inset-0 opacity-[0.05] mix-blend-soft-light bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
-
-        {/* 💥 HERO UI (UNCHANGED) */}
+ {/* 💥 HERO UI (UNCHANGED) */}
         <motion.div
           style={{
             opacity: heroOpacity,
@@ -142,6 +163,7 @@ export default function Hero() {
           </div>
         </motion.div>
 
+
         {/* 🚗 READY TO DRIVE (FIXED VISIBILITY ISSUE POSSIBLE CAUSE) */}
         <motion.div
           style={{
@@ -160,10 +182,11 @@ export default function Hero() {
           </h2>
         </motion.div>
 
-        {/* FADE OUT BOTTOM (UNCHANGED) */}
-        <div className="absolute bottom-0 left-0 w-full h-40 bg-gradient-to-t from-black to-transparent" />
 
+          </motion.div>
+        </div>
       </div>
-    </section>
+
+    </main>
   );
 }
